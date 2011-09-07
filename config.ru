@@ -6,31 +6,14 @@ class AsyncApp
 
   def initialize
     @lock = Mutex.new
-    @count = 0
     @timer = nil
     @clients = []
   end
+
   def call(env)
-    event_machine do
-      @timer ||= EM.add_periodic_timer(3) do
-        @count += 1
-        active_clients = []
-        @lock.synchronize do
-          @clients.each do |client|
-            unless client.instance_variable_get("@finished")
-              active_clients.push(client)
-              client << "data: Message #{@count}\n\n"
-            end
-          end
-
-          @clients = active_clients
-          puts "#{Time.now}: Message #{@count}; Clients: #{@clients.length}"
-        end
-      end
-    end
-    # body = env['async.body']
-
+    run_cleanup!
     body = env['async.body']
+
     @lock.synchronize do
       @clients << body
     end
@@ -38,7 +21,32 @@ class AsyncApp
     [200, {"Content-type" => "text/event-stream"}, body]
   end
 
+  def deliver(message)
+    data = "data: #{message}\n\n"
+    @clients.each do |client|
+      client << data
+    end
+    puts "#{Time.now}: Message #{message.inspect}; Clients: #{@clients.length}"
+  end
+
   private
+
+  def run_cleanup!
+    event_machine do
+      @timer ||= EM.add_periodic_timer(10) do
+        active_clients = []
+        @lock.synchronize do
+          @clients.each do |client|
+            unless client.instance_variable_get("@finished")
+              active_clients.push(client)
+            end
+          end
+          @clients = active_clients
+        end
+      end
+    end
+  end
+
   def event_machine(&block)
     if EM.reactor_running?
       block.call
@@ -59,30 +67,37 @@ class IndexApp
         <meta charset="UTF-8">
         <title>ASYNC</title>
         <script type="text/javascript">
-        var source = new EventSource('/messages');
+        var source;
+        var reconnect = function() {
+          source = new EventSource('/messages');
+          source.addEventListener('message', function(e) {
+            showMessage(e.data);
+          }, false);
+
+          source.addEventListener('open', function(e) {
+            // Connection was opened.
+          }, false);
+
+          source.addEventListener('error', function(e) {
+            console.log("Source Error", e)
+            if (e.eventPhase == EventSource.CLOSED) {
+              // Connection was closed.
+            }
+          }, false);
+        };
 
         var showMessage = function(msg) {
           var out = document.getElementById('stream');
           var d = document.createElement('div')
           var b = document.createElement('strong')
+          var now = new Date;
           b.innerHTML = msg;
-          d.innerHTML = (new Date) + " ";
+          d.innerHTML = now.getHours() + ":" + now.getMinutes() + ":" +now.getSeconds() + "  ";
           d.appendChild(b);
           out.appendChild(d);
         };
 
-        source.addEventListener('message', function(e) {
-          showMessage(e.data);
-        }, false);
-
-        source.addEventListener('open', function(e) {
-          // Connection was opened.
-        }, false);
-        source.addEventListener('error', function(e) {
-          if (e.eventPhase == EventSource.CLOSED) {
-            // Connection was closed.
-          }
-        }, false);
+        reconnect();
         </script>
       </head>
       <body>
@@ -95,13 +110,22 @@ class IndexApp
   end
 end
 
+messenger = AsyncApp.new
 
+console = Thread.new do
+  sleep(2)
+  loop do
+    print "Enter message: "
+    msg = gets.chomp
+    messenger.deliver(msg)
+  end
+end
 
 app = Rack::Builder.new do
 
   map "/messages" do
     use Rack::Async
-    run AsyncApp.new
+    run messenger
   end
 
   map "/" do
