@@ -1,0 +1,18 @@
+Really simple server that generates events as per the HTML5 Server-Sent Events spec.
+
+http://dev.w3.org/html5/eventsource/
+
+To try it out:
+
+$ git clone git://github.com/magnetised/rack-sse.git
+$ cd rack-sse
+$ bundle install
+$ bundle exec thin start
+
+Then goto http://localhost:3000 in your browser.
+
+Anything you type at the prompt should appear in your browser window(s).
+
+This uses rack-async to keep multiple connections open without stressing the server.
+
+
