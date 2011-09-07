@@ -12,7 +12,7 @@ class AsyncApp
   end
   def call(env)
     event_machine do
-      @timer ||= EM.add_periodic_timer(5) do
+      @timer ||= EM.add_periodic_timer(3) do
         @count += 1
         active_clients = []
         @lock.synchronize do
@@ -24,7 +24,7 @@ class AsyncApp
           end
 
           @clients = active_clients
-          puts "timer #{@count} #{@clients.length}"
+          puts "#{Time.now}: Message #{@count}; Clients: #{@clients.length}"
         end
       end
     end
@@ -60,9 +60,9 @@ class IndexApp
         <title>ASYNC</title>
         <script type="text/javascript">
         var source = new EventSource('/messages');
+
         var showMessage = function(msg) {
           var out = document.getElementById('stream');
-          console.log(out)
           var d = document.createElement('div')
           var b = document.createElement('strong')
           b.innerHTML = msg;
@@ -70,8 +70,8 @@ class IndexApp
           d.appendChild(b);
           out.appendChild(d);
         };
+
         source.addEventListener('message', function(e) {
-          console.log(new Date, e.data);
           showMessage(e.data);
         }, false);
 
