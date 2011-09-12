@@ -11,11 +11,15 @@ class AsyncApp
   end
 
   def call(env)
-    run_cleanup!
+
     body = env['async.body']
 
     @lock.synchronize do
       @clients << body
+    end
+
+    body.errback do
+      cleanup!(body)
     end
 
     [200, {"Content-type" => "text/event-stream"}, body]
@@ -31,19 +35,9 @@ class AsyncApp
 
   private
 
-  def run_cleanup!
-    event_machine do
-      @timer ||= EM.add_periodic_timer(10) do
-        active_clients = []
-        @lock.synchronize do
-          @clients.each do |client|
-            unless client.instance_variable_get("@finished")
-              active_clients.push(client)
-            end
-          end
-          @clients = active_clients
-        end
-      end
+  def cleanup!(connection)
+    @lock.synchronize do
+      @clients.delete(connection)
     end
   end
 
