@@ -1,7 +1,8 @@
 source :rubygems
 
+gem 'sinatra'
 gem 'rack'
-gem 'rack-async', :git => "git://github.com/matsadler/rack-async.git"
+#gem 'rack-async', :git => "git://github.com/matsadler/rack-async.git"
 gem 'thin'
 gem 'eventmachine'
 
