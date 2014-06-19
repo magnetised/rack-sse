@@ -20,7 +20,5 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  eventmachine
-  rack
   sinatra
   thin
