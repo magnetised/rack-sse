@@ -10,37 +10,32 @@ class IndexApp
         <meta charset="UTF-8">
         <title>ASYNC</title>
         <script type="text/javascript">
-        var source;
-        var reconnect = function() {
-          source = new EventSource('/messages');
-          source.addEventListener('message', function(e) {
+          var source = new EventSource('/messages');
+          source.onmessage = function(e) {
             showMessage(e.data);
-          }, false);
+          };
 
-          source.addEventListener('open', function(e) {
+          source.onopen = function(e) {
             // Connection was opened.
-          }, false);
+          };
 
-          source.addEventListener('error', function(e) {
+          source.onerror = function(e) {
             console.log("Source Error", e)
             if (e.eventPhase == EventSource.CLOSED) {
               // Connection was closed.
             }
-          }, false);
-        };
+          };
 
-        var showMessage = function(msg) {
-          var out = document.getElementById('stream');
-          var d = document.createElement('div')
-          var b = document.createElement('strong')
-          var now = new Date;
-          b.innerHTML = msg;
-          d.innerHTML = now.getHours() + ":" + now.getMinutes() + ":" +now.getSeconds() + "  ";
-          d.appendChild(b);
-          out.appendChild(d);
-        };
-
-        reconnect();
+          var showMessage = function(msg) {
+            var out = document.getElementById('stream');
+            var d = document.createElement('div')
+            var b = document.createElement('strong')
+            var now = new Date;
+            b.innerHTML = msg;
+            d.innerHTML = now.getHours() + ":" + now.getMinutes() + ":" +now.getSeconds() + "  ";
+            d.appendChild(b);
+            out.appendChild(d);
+          };
         </script>
       </head>
       <body>
